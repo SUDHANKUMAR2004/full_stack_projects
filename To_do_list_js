@@ -1,0 +1,93 @@
+const form = document.getElementById('task-form');
+const taskList = document.getElementById('task-list');
+const filterStatus = document.getElementById('filter-status');
+const filterPriority = document.getElementById('filter-priority');
+
+let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+
+function saveTasks() {
+    localStorage.setItem('tasks', JSON.stringify(tasks));
+}
+
+function getDaysRemaining(date) {
+    const today = new Date();
+    const deadline = new Date(date);
+    const diff = Math.floor((deadline - today) / (1000 * 60 * 60 * 24));
+    return diff;
+}
+
+function renderTasks() {
+    taskList.innerHTML = '';
+
+    const statusFilter = filterStatus.value;
+    const priorityFilter = filterPriority.value;
+
+    tasks.forEach((task, index) => {
+        if (
+            (statusFilter === 'All' || (task.completed ? 'Completed' : 'Pending') === statusFilter) &&
+            (priorityFilter === 'All' || task.priority === priorityFilter)
+        ) {
+            const div = document.createElement('div');
+            div.className = `task ${task.completed ? 'completed' : ''}`;
+
+            const daysLeft = getDaysRemaining(task.deadline);
+            let statusText = '';
+            if (daysLeft < 0) {
+                statusText = `<span class="status-label">Overdue</span>`;
+            } else {
+                statusText = `<span class="status-label">Due in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}</span>`;
+            }
+
+            div.innerHTML = `
+        <div class="info">
+          <strong class="title">${task.title}</strong>
+          <div>
+            <span class="badge ${task.priority}">${task.priority}</span>
+            ${task.deadline} ${statusText}
+          </div>
+        </div>
+        <div>
+          <input type="checkbox" ${task.completed ? 'checked' : ''} onchange="toggleComplete(${index})"/>
+          <button onclick="deleteTask(${index})">🗑️</button>
+        </div>
+      `;
+
+            taskList.appendChild(div);
+        }
+    });
+}
+
+function addTask(e) {
+    e.preventDefault();
+    const title = document.getElementById('task-title').value;
+    const priority = document.getElementById('task-priority').value;
+    const deadline = document.getElementById('task-deadline').value;
+
+    tasks.push({
+        title,
+        priority,
+        deadline,
+        completed: false
+    });
+    saveTasks();
+    renderTasks();
+    form.reset();
+}
+
+function deleteTask(index) {
+    tasks.splice(index, 1);
+    saveTasks();
+    renderTasks();
+}
+
+function toggleComplete(index) {
+    tasks[index].completed = !tasks[index].completed;
+    saveTasks();
+    renderTasks();
+}
+
+form.addEventListener('submit', addTask);
+filterStatus.addEventListener('change', renderTasks);
+filterPriority.addEventListener('change', renderTasks);
+
+renderTasks();
